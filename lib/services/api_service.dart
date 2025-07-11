@@ -14,6 +14,7 @@ class ApiService {
 
   Future<Response> start() => _call('start', method: 'GET');
   Future<Response> stop() => _call('stop', method: 'GET');
+  Future<Response> getStatus() => _call('status', method: 'GET');
 
   Future<Map<String, dynamic>> fetchVideoList() async {
     final url = '$_baseUrl/list';
