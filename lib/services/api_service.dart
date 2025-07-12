@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'dart:convert';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -62,6 +63,28 @@ class ApiService {
         stackTrace: stack,
       );
       rethrow;
+    }
+  }
+
+  // Fetch a single frame from the /stream endpoint as a base64 string
+  Future<String?> fetchStreamFrame() async {
+    final url = '$_baseUrl/stream';
+    try {
+      final response = await _dio.get(url);
+      if (response.statusCode == 200 &&
+          response.data is String &&
+          response.data.trim().isNotEmpty) {
+        return response.data.trim();
+      }
+      // If the response is JSON with a field, adjust here
+      if (response.statusCode == 200 &&
+          response.data is Map &&
+          response.data['frame'] != null) {
+        return response.data['frame'].toString().trim();
+      }
+      return null;
+    } catch (e) {
+      return null;
     }
   }
 

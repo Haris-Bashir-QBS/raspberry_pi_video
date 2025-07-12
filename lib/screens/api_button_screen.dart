@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'package:open_file/open_file.dart';
 import 'dart:async';
+import 'dart:typed_data';
+import 'dart:convert';
+import 'live_stream_screen.dart';
 
 class ApiButtonScreen extends StatefulWidget {
   const ApiButtonScreen({super.key});
@@ -21,6 +24,7 @@ class _ApiButtonScreenState extends State<ApiButtonScreen> {
   final List<String> _log = [];
   Timer? _statusTimer;
   bool _statusCheckEnabled = true;
+  // bool _showLiveStream = false;
 
   @override
   void initState() {
@@ -161,6 +165,12 @@ class _ApiButtonScreenState extends State<ApiButtonScreen> {
     }
   }
 
+  void _openLiveStream() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const LiveStreamScreen()));
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -238,6 +248,46 @@ class _ApiButtonScreenState extends State<ApiButtonScreen> {
         color: Colors.grey[100],
         child: Column(
           children: [
+            // Padding(
+            //   padding: const EdgeInsets.only(
+            //     top: 12.0,
+            //     left: 16,
+            //     right: 16,
+            //     bottom: 4,
+            //   ),
+            //   child: Row(
+            //     children: [
+            //       Icon(Icons.live_tv, color: Colors.deepPurple),
+            //       const SizedBox(width: 8),
+            //       Text(
+            //         'Live Stream',
+            //         style: TextStyle(
+            //           fontWeight: FontWeight.bold,
+            //           color: Colors.deepPurple[700],
+            //           fontSize: 16,
+            //         ),
+            //       ),
+            //       const Spacer(),
+            //       Switch(
+            //         value: _showLiveStream,
+            //         activeColor: Colors.deepPurple,
+            //         onChanged: (val) {
+            //           setState(() {
+            //             _showLiveStream = val;
+            //           });
+            //         },
+            //       ),
+            //     ],
+            //   ),
+            // ),
+            // if (_showLiveStream)
+            //   const Padding(
+            //     padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
+            //     child: AspectRatio(
+            //       aspectRatio: 4 / 3,
+            //       child: LiveStreamWidget(),
+            //     ),
+            //   ),
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
@@ -511,6 +561,65 @@ class _ApiButtonScreenState extends State<ApiButtonScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class LiveStreamWidget extends StatefulWidget {
+  const LiveStreamWidget({super.key});
+
+  @override
+  State<LiveStreamWidget> createState() => _LiveStreamWidgetState();
+}
+
+class _LiveStreamWidgetState extends State<LiveStreamWidget> {
+  Uint8List? _currentFrame;
+  bool _running = true;
+  late final ApiService _apiService;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _apiService = ApiService();
+    _startPolling();
+  }
+
+  void _startPolling() {
+    _timer = Timer.periodic(const Duration(milliseconds: 200), (_) async {
+      if (!_running) return;
+      final base64Image = await _apiService.fetchStreamFrame();
+      if (base64Image != null && mounted) {
+        try {
+          final bytes = base64Decode(base64Image);
+          setState(() {
+            _currentFrame = bytes;
+          });
+        } catch (_) {}
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _running = false;
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child:
+            _currentFrame != null
+                ? Image.memory(_currentFrame!, gaplessPlayback: true)
+                : const CircularProgressIndicator(),
       ),
     );
   }
